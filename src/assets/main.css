@@ -179,7 +179,7 @@ button {
 .slides-section {
   position: relative;
   z-index: 1;
-  width: min(1180px, 100%);
+  width: min(1080px, 100%);
   margin: 0 auto;
   display: grid;
   gap: 72px;
@@ -212,10 +212,15 @@ button {
   user-select: none;
 }
 
+.slide-canvas {
+  max-width: 100%;
+  height: auto;
+}
+
 .footer {
   position: relative;
   z-index: 1;
-  width: min(1180px, 100%);
+  width: min(1080px, 100%);
   margin: 48px auto 0;
   display: flex;
   justify-content: space-between;
@@ -226,15 +231,35 @@ button {
   font-size: 13px;
 }
 
+@media (min-width: 761px) {
+  .slide-canvas {
+    width: auto;
+    max-height: 78vh;
+    margin: 0 auto;
+  }
+}
+
 @media (max-width: 760px) {
   .presentation-page {
-    padding: 96px 12px 36px;
+    padding: 82px 10px 32px;
+  }
+
+  .background-glow-left {
+    left: -220px;
+    width: 320px;
+    height: 320px;
+  }
+
+  .background-glow-right {
+    right: -260px;
+    width: 420px;
+    height: 420px;
   }
 
   .topbar {
-    top: 12px;
-    width: calc(100vw - 24px);
-    padding: 9px;
+    top: 10px;
+    width: calc(100vw - 20px);
+    padding: 8px;
   }
 
   .brand {
@@ -247,22 +272,55 @@ button {
 
   .language-button {
     flex: 1;
+    padding: 9px 12px;
   }
 
   .hero {
     margin-bottom: 28px;
+    padding-top: 10px;
+  }
+
+  .hero-kicker {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+  }
+
+  .hero h1 {
+    font-size: clamp(34px, 12vw, 56px);
+  }
+
+  .hero-subtitle {
+    font-size: 15px;
   }
 
   .slides-section {
-    gap: 36px;
+    width: 100%;
+    gap: 32px;
+  }
+
+  .slide-meta {
+    font-size: 10px;
+    margin-bottom: 8px;
   }
 
   .slide-image {
+    width: 100%;
+    height: auto;
     border-radius: 10px;
   }
 
+  .slide-canvas {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none;
+    margin: 0;
+  }
+
   .footer {
+    width: 100%;
     flex-direction: column;
+    gap: 8px;
+    margin-top: 36px;
   }
 }
 
@@ -275,9 +333,4 @@ button {
   .slide-card {
     transition: none;
   }
-}
-
-.slide-canvas {
-  max-width: 100%;
-  height: auto;
 }
