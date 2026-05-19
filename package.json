@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "animejs": "^4.4.1",
+    "pdfjs-dist": "^5.7.284",
     "vue": "beta"
   },
   "devDependencies": {

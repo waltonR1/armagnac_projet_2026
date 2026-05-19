@@ -1,34 +1,94 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { animate, stagger } from 'animejs'
+import * as pdfjsLib from 'pdfjs-dist'
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker
 
 type Language = 'zh' | 'fr'
 
 const lang = ref<Language>('zh')
-const totalPages = 12
+const totalPages = ref(0)
+
+const containerRef = ref<HTMLElement | null>(null)
+
+const pdfMap: Record<Language, string> = {
+  zh: '/pdf/zh.pdf',
+  fr: '/pdf/fr.pdf',
+}
 
 let observer: IntersectionObserver | null = null
-
-const slides = computed(() =>
-  Array.from({ length: totalPages }, (_, index) => {
-    const page = index + 1
-
-    return {
-      page,
-      src: `/slides/${lang.value}/${String(page).padStart(2, '0')}.PNG`,
-    }
-  }),
-)
+let renderToken = 0
 
 function setLanguage(nextLang: Language) {
   if (lang.value === nextLang) return
   lang.value = nextLang
 }
 
-function createObserver() {
-  if (observer) {
-    observer.disconnect()
+async function renderPdf() {
+  if (!containerRef.value) return
+
+  const token = ++renderToken
+  const container = containerRef.value
+
+  observer?.disconnect()
+  container.innerHTML = ''
+
+  const pdf = await pdfjsLib.getDocument(pdfMap[lang.value]).promise
+  totalPages.value = pdf.numPages
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+    if (token !== renderToken) return
+
+    const page = await pdf.getPage(pageNumber)
+    const viewport = page.getViewport({ scale: 2.2 })
+    const dpr = window.devicePixelRatio || 1
+
+    const wrapper = document.createElement('article')
+    wrapper.className = 'slide-card'
+
+    const meta = document.createElement('div')
+    meta.className = 'slide-meta'
+
+    const current = document.createElement('span')
+    current.innerText = String(pageNumber).padStart(2, '0')
+
+    const total = document.createElement('span')
+    total.innerText = String(pdf.numPages)
+
+    meta.appendChild(current)
+    meta.appendChild(total)
+
+    const canvas = document.createElement('canvas')
+    canvas.className = 'slide-image slide-canvas'
+
+    const context = canvas.getContext('2d')
+    if (!context) return
+
+    canvas.width = Math.floor(viewport.width * dpr)
+    canvas.height = Math.floor(viewport.height * dpr)
+    canvas.style.width = `${viewport.width}px`
+    canvas.style.height = `${viewport.height}px`
+
+    await page.render({
+      canvas,
+      canvasContext: context,
+      viewport,
+      transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined,
+    }).promise
+
+    wrapper.appendChild(meta)
+    wrapper.appendChild(canvas)
+    container.appendChild(wrapper)
   }
+
+  await nextTick()
+  createObserver()
+}
+
+function createObserver() {
+  observer?.disconnect()
 
   const cards = document.querySelectorAll<HTMLElement>('.slide-card')
 
@@ -37,9 +97,7 @@ function createObserver() {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return
 
-        const target = entry.target as HTMLElement
-
-        animate(target, {
+        animate(entry.target, {
           opacity: [0, 1],
           translateY: [70, 0],
           scale: [0.965, 1],
@@ -47,7 +105,7 @@ function createObserver() {
           easing: 'outExpo',
         })
 
-        observer?.unobserve(target)
+        observer?.unobserve(entry.target)
       })
     },
     {
@@ -59,8 +117,8 @@ function createObserver() {
   cards.forEach((card) => observer?.observe(card))
 }
 
-async function animateLanguageChange() {
-  await nextTick()
+watch(lang, async () => {
+  await renderPdf()
 
   animate('.slide-card', {
     opacity: [0.45, 1],
@@ -70,14 +128,9 @@ async function animateLanguageChange() {
     delay: stagger(35),
     easing: 'outQuad',
   })
-}
-
-watch(lang, animateLanguageChange)
-
-onMounted(async () => {
-  await nextTick()
-  createObserver()
 })
+
+onMounted(renderPdf)
 
 onBeforeUnmount(() => {
   observer?.disconnect()
@@ -97,7 +150,6 @@ onBeforeUnmount(() => {
 
       <nav class="language-switch" aria-label="Language switch">
         <button
-          type="button"
           class="language-button"
           :class="{ active: lang === 'zh' }"
           @click="setLanguage('zh')"
@@ -106,7 +158,6 @@ onBeforeUnmount(() => {
         </button>
 
         <button
-          type="button"
           class="language-button"
           :class="{ active: lang === 'fr' }"
           @click="setLanguage('fr')"
@@ -130,22 +181,7 @@ onBeforeUnmount(() => {
       </p>
     </section>
 
-    <section class="slides-section">
-      <article v-for="slide in slides" :key="`${lang}-${slide.page}`" class="slide-card">
-        <div class="slide-meta">
-          <span>{{ String(slide.page).padStart(2, '0') }}</span>
-          <span>{{ totalPages }}</span>
-        </div>
-
-        <img
-          class="slide-image"
-          :src="slide.src"
-          :alt="`Slide ${slide.page}`"
-          loading="lazy"
-          draggable="false"
-        />
-      </article>
-    </section>
+    <section ref="containerRef" class="slides-section" />
 
     <footer class="footer">
       <span>© 2026 Armagnac Project</span>
