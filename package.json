@@ -6,20 +6,22 @@
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
-    "preview": "vite preview",
+    "preview": "npm run build-only && wrangler dev",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/",
-    "slides:build": "node scripts/pdf-to-slides.mjs"
+    "slides:build": "node scripts/pdf-to-slides.mjs",
+    "deploy": "npm run build-only && wrangler deploy"
   },
   "dependencies": {
     "animejs": "^4.4.1",
     "vue": "beta"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.39.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.12.2",
     "@vitejs/plugin-vue": "^6.0.6",
@@ -37,7 +39,8 @@
     "typescript": "~6.0.0",
     "vite": "^8.0.8",
     "vite-plugin-vue-devtools": "^8.1.1",
-    "vue-tsc": "^3.2.6"
+    "vue-tsc": "^3.2.6",
+    "wrangler": "^4.95.0"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
