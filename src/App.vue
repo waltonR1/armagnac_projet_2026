@@ -1,93 +1,32 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { animate, stagger } from 'animejs'
-import * as pdfjsLib from 'pdfjs-dist'
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker
 
 type Language = 'zh' | 'fr'
 
 const lang = ref<Language>('zh')
-const totalPages = ref(0)
 
-const containerRef = ref<HTMLElement | null>(null)
-
-const pdfMap: Record<Language, string> = {
-  zh: '/pdf/zh.pdf',
-  fr: '/pdf/fr.pdf',
+const slideMap: Record<Language, string[]> = {
+  zh: Array.from({ length: 12 }, (_, index) => {
+    return `/slides/zh/${String(index + 1).padStart(2, '0')}.png`
+  }),
+  fr: Array.from({ length: 12 }, (_, index) => {
+    return `/slides/fr/${String(index + 1).padStart(2, '0')}.png`
+  }),
 }
 
+const slides = computed(() => slideMap[lang.value])
+
 let observer: IntersectionObserver | null = null
-let renderToken = 0
 
 function setLanguage(nextLang: Language) {
   if (lang.value === nextLang) return
   lang.value = nextLang
 }
 
-async function renderPdf() {
-  if (!containerRef.value) return
-
-  const token = ++renderToken
-  const container = containerRef.value
-
-  observer?.disconnect()
-  container.innerHTML = ''
-
-  const pdf = await pdfjsLib.getDocument(pdfMap[lang.value]).promise
-  totalPages.value = pdf.numPages
-
-  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-    if (token !== renderToken) return
-
-    const page = await pdf.getPage(pageNumber)
-    const viewport = page.getViewport({ scale: 2.2 })
-    const dpr = window.devicePixelRatio || 1
-
-    const wrapper = document.createElement('article')
-    wrapper.className = 'slide-card'
-
-    const meta = document.createElement('div')
-    meta.className = 'slide-meta'
-
-    const current = document.createElement('span')
-    current.innerText = String(pageNumber).padStart(2, '0')
-
-    const total = document.createElement('span')
-    total.innerText = String(pdf.numPages)
-
-    meta.appendChild(current)
-    meta.appendChild(total)
-
-    const canvas = document.createElement('canvas')
-    canvas.className = 'slide-image slide-canvas'
-
-    const context = canvas.getContext('2d')
-    if (!context) return
-
-    canvas.width = Math.floor(viewport.width * dpr)
-    canvas.height = Math.floor(viewport.height * dpr)
-    canvas.style.width = `${viewport.width}px`
-    canvas.style.height = `${viewport.height}px`
-
-    await page.render({
-      canvas,
-      canvasContext: context,
-      viewport,
-      transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined,
-    }).promise
-
-    wrapper.appendChild(meta)
-    wrapper.appendChild(canvas)
-    container.appendChild(wrapper)
-  }
-
+async function createObserver() {
   await nextTick()
-  createObserver()
-}
 
-function createObserver() {
   observer?.disconnect()
 
   const cards = document.querySelectorAll<HTMLElement>('.slide-card')
@@ -109,7 +48,7 @@ function createObserver() {
       })
     },
     {
-      threshold: 0.22,
+      threshold: 0.18,
       rootMargin: '0px 0px -8% 0px',
     },
   )
@@ -118,7 +57,7 @@ function createObserver() {
 }
 
 watch(lang, async () => {
-  await renderPdf()
+  await createObserver()
 
   animate('.slide-card', {
     opacity: [0.45, 1],
@@ -130,7 +69,7 @@ watch(lang, async () => {
   })
 })
 
-onMounted(renderPdf)
+onMounted(createObserver)
 
 onBeforeUnmount(() => {
   observer?.disconnect()
@@ -181,7 +120,22 @@ onBeforeUnmount(() => {
       </p>
     </section>
 
-    <section ref="containerRef" class="slides-section" />
+    <section class="slides-section">
+      <article v-for="(slide, index) in slides" :key="slide" class="slide-card">
+        <div class="slide-meta">
+          <span>{{ String(index + 1).padStart(2, '0') }}</span>
+          <span>{{ slides.length }}</span>
+        </div>
+
+        <img
+          class="slide-image"
+          :src="slide"
+          :alt="`Slide ${index + 1}`"
+          loading="lazy"
+          decoding="async"
+        />
+      </article>
+    </section>
 
     <footer class="footer">
       <span>© 2026 Armagnac Project</span>

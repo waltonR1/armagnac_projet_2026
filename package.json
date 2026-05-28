@@ -12,11 +12,11 @@
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "format": "prettier --write --experimental-cli src/",
+    "slides:build": "node scripts/pdf-to-slides.mjs"
   },
   "dependencies": {
     "animejs": "^4.4.1",
-    "pdfjs-dist": "^5.7.284",
     "vue": "beta"
   },
   "devDependencies": {
@@ -32,6 +32,7 @@
     "jiti": "^2.6.1",
     "npm-run-all2": "^8.0.4",
     "oxlint": "~1.60.0",
+    "pdf-poppler": "^0.2.3",
     "prettier": "3.8.3",
     "typescript": "~6.0.0",
     "vite": "^8.0.8",
